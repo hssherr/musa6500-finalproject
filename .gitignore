@@ -210,3 +210,4 @@ __marimo__/
 testing.ipynb
 data/*
 eurosat_files/*
+*.png
