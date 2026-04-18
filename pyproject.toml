@@ -23,6 +23,7 @@ dependencies = [
     "tifffile>=2026.3.3",
     "torch>=2.11.0",
     "torchvision>=0.26.0",
+    "transformers>=5.5.4",
     "xarray>=2026.2.0",
 ]
 
