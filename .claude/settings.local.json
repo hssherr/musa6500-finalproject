@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import json; nb=json.load\\(open\\('F:/GitHub/musa6500-finalproject/main.ipynb'\\)\\); [print\\(i, c['id'], c['cell_type'], repr\\(''.join\\(c['source']\\)[:80]\\)\\) for i,c in enumerate\\(nb['cells']\\)]\")",
+      "Bash(python -c ' *)",
+      "Bash(python -)",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('F:/GitHub/musa6500-finalproject/main.ipynb'\\)\\); print\\(len\\(nb['cells']\\)\\)\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('F:/GitHub/musa6500-finalproject/main.ipynb', encoding='utf-8'\\)\\); print\\(len\\(nb['cells']\\)\\); [print\\(i, c['cell_type'], \\(''.join\\(c['source']\\)[:80] if c['source'] else ''\\).replace\\(chr\\(10\\),' '\\)\\) for i,c in enumerate\\(nb['cells']\\)]\")"
+    ]
+  }
+}
