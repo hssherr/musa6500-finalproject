@@ -25,7 +25,7 @@ The target user for this project is L&I's Emergency Services Unit and the Philad
 
 The resulting label distribution is severely imbalanced: ~1.4% of parcels carry any distress label, and genuinely Imminently Dangerous parcels make up fewer than 0.03% of the city.
 
-![Labeled Parcels — Imminently Dangerous, Unsafe, and Stable](ID_property.png)
+![Labeled Parcels — Imminently Dangerous, Unsafe, and Stable](images/ID_property.png)
 
 ---
 
@@ -64,7 +64,7 @@ This two-track evaluation lets us report both in-distribution performance (balan
 
 At RandomForest's default 0.5 probability cutoff, no validation parcel crosses the Distressed threshold:
 
-![Validation Confusion Matrix at threshold 0.5](validation_confusion_matrix.png)
+![Validation Confusion Matrix at threshold 0.5](images/validation_confusion_matrix.png)
 
 All 2,875 Stable parcels are correctly classified, but all 1,437 Distressed parcels are predicted Stable. Distressed-class recall is 0 at the default threshold. The F1-optimal threshold on the validation set drops to ≈ 0.23, which raises recall but at the cost of flooding the positive class.
 
@@ -72,13 +72,13 @@ All 2,875 Stable parcels are correctly classified, but all 1,437 Distressed parc
 
 A t-SNE projection of the 1024-dim Clay CLS embeddings on the validation set makes the underlying issue visible:
 
-![t-SNE of Clay CLS embeddings on the validation set](projection.png)
+![t-SNE of Clay CLS embeddings on the validation set](images/projection.png)
 
 Stable (blue) and Distressed (red) points are uniformly intermixed — there is no region of embedding space where one class dominates. The classifier has nothing clean to lean on.
 
 Cosine nearest-neighbor retrieval tells the same story. Pulling the seven closest chips to a known Distressed query returns mostly Stable chips at very small cosine distances (0.04–0.05):
 
-![Nearest neighbors in Clay embedding space](nnclay.png)
+![Nearest neighbors in Clay embedding space](images/nnclay.png)
 
 Clay's CLS token is clearly clustering by surface texture (roof tone, orientation, sunlight angle) rather than by the structural-failure signals we care about.
 
@@ -86,7 +86,7 @@ Clay's CLS token is clearly clustering by surface texture (roof tone, orientatio
 
 Looking at the top-scoring correctly-flagged Distressed chips from the balanced validation set:
 
-![Highest-confidence true positives](val_outcomes.png)
+![Highest-confidence true positives](images/val_outcomes.png)
 
 The highest predicted probabilities sit around p = 0.44–0.47 (not far above the 0.23 tuned threshold), and the chips themselves are a mix: some show visible roof patches or debris, but many are ordinary row house roofs whose only distinguishing feature seems to be shadow orientation. The model does not appear to have learned a specific structural-failure concept.
 
@@ -94,7 +94,7 @@ The highest predicted probabilities sit around p = 0.44–0.47 (not far above th
 
 At the F1-tuned threshold of 0.23, the classifier collapses when applied to the realistic class distribution:
 
-![Natural-distribution confusion matrix at threshold 0.23](nat_distribution_confusion_matrix.png)
+![Natural-distribution confusion matrix at threshold 0.23](images/nat_distribution_confusion_matrix.png)
 
 | Metric | Value |
 |---|---|
@@ -106,7 +106,7 @@ At the F1-tuned threshold of 0.23, the classifier collapses when applied to the 
 
 Every parcel gets flagged. Mapping the predicted probabilities geographically explains why:
 
-![Predicted distress probability on the natural-distribution holdout](preds_naturaldistribution.png)
+![Predicted distress probability on the natural-distribution holdout](images/preds_naturaldistribution.png)
 
 The predicted probabilities for the entire city cluster in a narrow band of roughly 0.28–0.43. There is no clean separation — pushing the threshold up flags nobody, pushing it down flags everybody. The classifier is operating in a regime where almost all signal is noise.
 
