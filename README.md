@@ -1,93 +1,160 @@
 # Detecting Structural Distress at Scale: A Geospatial Foundation Model Approach to Urban Building Safety
 
-**Course:** MUSA 6500: Geospatial Machine Learning in Remote Sensing  
-**Instructors:** Nissim Lebovits, Guray Erus  
+**Course:** MUSA 6500: Geospatial Machine Learning in Remote Sensing
+**Instructors:** Nissim Lebovits, Guray Erus
 **Authors:** Jason Fan, Henry Sywulak-Herr
 
 ---
 
-## Problem Definition & Use Case
+## 1. Problem Definition & Use Case
 
 Philadelphia's aging row home stock presents a unique structural challenge: a single neglected roof can compromise the stability of an entire block. With over 40,000 vacant lots, buildings classified as Imminently Dangerous (ID) within the Philadelphia Property Maintenance Code represent the most severe category of code violation, where a structure is at "imminent danger of failure or collapse."
 
-While the Department of Licenses and Inspections (L&I) maintains a database of vacant property violations—including the Vacant Property Indicator (VPI), which has recently resumed operations after an extended hiatus, though data quality remains inconsistent—administrative data is often reactive and lagged. Mayor Cherelle Parker's administration has also indefinitely paused systematic data collection on vacant lots, leaving gaps in real-time intelligence on structures that pose the greatest immediate threat to Philadelphia residents.
+While the Department of Licenses and Inspections (L&I) maintains a database of vacant property violations — including the Vacant Property Indicator (VPI), which has recently resumed operations after an extended hiatus, though data quality remains inconsistent — administrative data is often reactive and lagged. Mayor Cherelle Parker's administration has also indefinitely paused systematic data collection on vacant lots, leaving gaps in real-time intelligence on structures that pose the greatest immediate threat to Philadelphia residents.
 
-The target user for this project is L&I's Emergency Services Unit and the Philadelphia Land Bank, though it would be broadly useful to most infrastructure- and service-related organizations in Philadelphia (PECO, USPS, Philadelphia Water Department, Planning Office, etc.) that require accurate accounting of vacant parcels. These users need a tool that moves beyond static tax records to identify physical signatures of structural failure—roof collapses, bowing walls, or missing structural members. The output is a binary segmentation mask (Imminently Dangerous vs. Stable) at the parcel level, helping target users identify prime candidates for acquisition and stabilization before they cause irreparable injury to residents or adjacent structures.
-
----
-
-## Technical Justification
-
-Structural damage in high-resolution satellite imagery is defined by changes in geometry and texture rather than simple spectral signatures.
-
-### Semantic Segmentation
-
-To identify a building as "dangerous," a model must recognize localized failure points (e.g., a hole in a roof) within the context of the larger structure.
-
-- **Task Selection:** We will utilize Semantic Segmentation powered by a pre-trained Building Damage Model (similar to post-disaster recovery models). By segmenting the specific areas of a roof or facade that show "damage," we can calculate a structural distress score per parcel.
-- **Structural Distress Score:** By calculating the ratio of "damaged" pixels to the total building footprint, we can generate a normalized distress score.
-
-### Failure Modes & Mitigation
-
-- **New construction:** New roof installations can resemble holes or debris. We will mitigate this by filtering parcels with active eCLIPSE permits.
-- **Parallax & Occlusion:** Philadelphia's tall "row home canyons" create shadows that hide facade leaning. To address this, we will integrate elevation data—either the latest Philadelphia Digital Elevation Model (DEM) or LiDAR-derived height models—to detect vertical deviations that RGB imagery might miss. We are evaluating the Philadelphia DEM as the preferred source for its local accuracy and recency.
+The target user for this project is L&I's Emergency Services Unit and the Philadelphia Land Bank, though it would be broadly useful to most infrastructure- and service-related organizations in Philadelphia (PECO, USPS, Philadelphia Water Department, Planning Office, etc.) that require accurate accounting of vacant parcels. These users need a tool that moves beyond static tax records to identify physical signatures of structural failure — roof collapses, bowing walls, or missing structural members. The intended output is a parcel-level distress score that helps target users identify prime candidates for inspection, acquisition, and stabilization before they cause irreparable injury to residents or adjacent structures.
 
 ---
 
-## Methodological Precedent
+## 2. Data
 
-- **The Clay Foundation Model (v1.5):** Rather than training a CNN from scratch, we use Clay, a Vision Transformer (ViT) pre-trained on global Earth Observation data. Clay's ability to understand urban textures allows for better generalization across Philadelphia's diverse neighborhoods, from Kensington's industrial shells to South Philadelphia's brick row houses.
-  - Schroer et al. (2025) provides the foundations on the usage of Vision Transformer (ViT) models, such as the Clay model, instead of the traditional CNN processes. Through this approach, the computational overhead and amount of labeled data needed to extract spatial insights is significantly reduced.
-  - Schroer, K., Adhikari, B., & Moise, I. (2025, May 29). *Revolutionizing earth observation with geospatial foundation models on AWS.* AWS Machine Learning Blog.
+- **Primary Imagery:** City of Philadelphia Aerial Imagery (0.25 ft / 7.62 cm RGB, latest 2024/2025 mosaic). Ultra-high resolution is essential for identifying precise details of the built environment.
+- **Building Footprints / Parcels:** VIDA Open Buildings supplemented by Philadelphia Water Department (PWD) parcel geometries, used for spatial joins and chip extraction.
+- **Labels:** L&I Licenses & Inspections violations, reduced to three classes — Imminently Dangerous (ID), Unsafe, and Stable. Unsafe and ID parcels are merged into a single "Distressed" class for training.
+- **Permits:** eCLIPSE permit data, used downstream to suppress false positives on parcels with active construction/reconstruction.
 
-- **Building Footprint Decoupling:** Recent research suggests that decoupling localization (where is the building?) from classification (is it damaged?) improves accuracy in dense urban areas. We will use the VIDA Open Buildings dataset as our primary source of building footprint masks, with Google or Microsoft Open Buildings as potential supplements given their higher update frequency in the US. These static masks allow the model to focus purely on structural integrity.
-  - Hatić et al. (2025) and Liu et al. (2021) both explore this approach.
-  - Hatić, D., Polushko, V., Rauhut, M., & Hagen, H. (2025). *Post-Disaster Building Damage Assessment: Multi-Class Object Detection vs. Object Localization and Classification.* Remote Sensing, 17(24), 3957.
-  - C. Liu, L. Ge and S. M. E. Sepasgozar, "Post-Disaster Classification of Building Damage Using Transfer Learning," 2021 IEEE International Geoscience and Remote Sensing Symposium IGARSS, Brussels, Belgium, 2021, pp. 2194–2197.
+The resulting label distribution is severely imbalanced: ~1.4% of parcels carry any distress label, and genuinely Imminently Dangerous parcels make up fewer than 0.03% of the city.
 
-- **Potential Model Improvements:** Although many existing building damage detection models are designed for post-disaster contexts, the classification challenges remain applicable to non-disaster settings. Model enhancements explored in related literature may inform our approach.
-  - Ahmadi et al. (2023) discusses potential elements of a building damage detection model, including the use of adaptive kernel sizes and data augmentation to overcome the imbalance of buildings and background pixels.
-  - Ahmadi, S. A., Mohammadzadeh, A., Yokoya, N., & Ghorbanian, A. (2024). *BD-SKUNet: Selective-Kernel UNets for Building Damage Assessment in High-Resolution Satellite Images.* Remote Sensing, 16(1), 182.
+![Labeled Parcels — Imminently Dangerous, Unsafe, and Stable](ID_property.png)
 
 ---
 
-## Data Plan
+## 3. Methodology
 
-- **Primary Imagery:** City of Philadelphia Aerial Imagery (most recent: 2025; past years available)
-  - Resolution: 0.25 ft (7.62 cm)
-  - Bands: 3-band (RGB)
-  - Justification: Ultra-high resolution is essential for identifying precise details of the built environment.
-- **Building Footprints:** VIDA Open Buildings dataset (primary), with Google or Microsoft Open Buildings as supplements for improved US coverage and recency. Parcel boundaries from the Philadelphia Water Department (PWD) parcel layers will supplement spatial joins to the administrative record.
-- **Vector / Label Data:** L&I Vacant Lot violation data will serve as the primary source for training labels. Clean and seal data will be incorporated to improve ground-truth accuracy. Note that the VPI has recently resumed after a multi-year outage; we will incorporate it cautiously given ongoing data quality concerns.
-- **Elevation Data:** Philadelphia Digital Elevation Model (DEM) for detecting vertical structural deviations. We are in contact with instructors regarding access to the latest extracted DEM.
+### 3.1 Pivot from Clay+UNet segmentation to Clay+RandomForest classification
 
----
+The project proposal targeted pixel-level damage segmentation using Clay embeddings fed into a UNet decoder. During implementation we pivoted to the approach documented in Clay's official [downstream-classification tutorial](https://clay-foundation.github.io/model/finetune/finetune-on-embeddings.html): run Clay as a frozen feature extractor, cache CLS-token embeddings per chip, and train a classical classifier on top. This change was driven by three considerations:
 
-## Modeling Approach
+- Our available labels are parcel-level administrative classifications, not pixel-accurate damage masks, so a segmentation loss has nothing to supervise.
+- Clay's documented use pattern for classification is frozen features plus a scikit-learn head — not gradient-based fine-tuning. The tutorial achieves 90% accuracy on marina detection with 216 samples and no training loop.
+- Compute cost drops from hours on an A100 to minutes, which let us iterate on the pipeline.
 
-Our model will derive from a pre-built, global foundation model from Clay designed to efficiently distill and synthesize vast amounts of environmental data.
+### 3.2 Pipeline
 
-- **Structural Embedding (Clay):** For each building parcel, capture textural decay signals (rusting, debris, weathering).
-- **Segmentation Head (UNet):** A UNet decoder will process these embeddings to produce a binary damage mask.
-- **Temporal Change Detection:** By comparing 2024 and 2025 imagery, we identify the rate of structural decay. A building that shows a sudden darkening or texture change in the roof area over 12 months will be flagged for immediate inspection.
+1. **Chipping.** For each parcel centroid, extract a fixed 130 ft (~40 m) window from the Philadelphia aerial mosaic. Pad to square and resize to 256×256, Clay's native pretraining resolution.
+2. **Normalization.** Apply Clay's LINZ-aligned band statistics, the closest pretraining platform to 0.3 m RGB aerial imagery.
+3. **Embedding extraction.** Run Clay v1.5 large (frozen) and keep the 1024-dim CLS token per chip. Time and latitude/longitude conditioning are set to zero, a configuration sanctioned by the Clay documentation.
+4. **Classification.** Train `sklearn.ensemble.RandomForestClassifier` with 500 trees, `class_weight='balanced'`, and `min_samples_leaf=2` on the cached embeddings.
+5. **Threshold tuning.** Scan thresholds on the held-out validation set and select the F1-maximizing value.
+6. **Permit filter.** At inference time, parcels with active eCLIPSE permits are forced to the Stable class to suppress new-construction false positives.
 
----
+### 3.3 Train / evaluation split
 
-## Evaluation Strategy
+- **Natural-distribution holdout** — a 10% random sample of all parcels (~54,700 parcels), which retains the true ~1.4% Distressed prior. Never seen during training or threshold tuning.
+- **Balanced training pool** — from the remaining 90%, every Distressed parcel plus 2× as many randomly sampled Stable parcels, yielding ~21,600 parcels with a 2:1 class ratio.
+- **Train / val split** — 80/20 stratified split of the balanced pool (train ≈ 17,300; val ≈ 4,300).
 
-Given the operational stakes of this model, we prioritize **Recall over Precision**. While there are an estimated 200–300 imminently dangerous buildings in Philadelphia at any given time, the cost of a false negative—a missed collapse that injures or kills a resident—is catastrophic, both in human terms and in terms of legal and policy liability. Even if the model over-identifies by 50%, the resulting volume of inspections (~450) remains operationally manageable for a small dedicated team. By contrast, missing a structural failure that leads to a wrongful death represents an irreversible policy failure. Accordingly, our primary optimization target is minimizing false negatives.
-
-- **Primary Metric:** Mean Intersection over Union (mIoU) for the "Damaged" class.
-- **The "ID" Goal:** A Recall of >0.90 for the "Imminently Dangerous" class. We prioritize capturing the vast majority of genuinely dangerous structures, accepting that some additional inspections will be required to clear false positives.
-- **Secondary Metric:** Precision will be reported alongside Recall to characterize the false positive burden on inspection teams.
-- **Geographic Stratification:** We will evaluate the model separately in North, South, and West Philadelphia to ensure that differences in architectural style (e.g., wood frame vs. masonry) do not bias results.
+This two-track evaluation lets us report both in-distribution performance (balanced val) and operationally realistic performance (natural-distribution holdout).
 
 ---
 
-## Comparison of Considered Approaches
+## 4. Results
 
-| Approach | Pro | Con |
-|----------|-----|-----|
-| NDVI Baseline | Finds "green" roofs (leaks leading to moss). | Misses structural failures without vegetation. |
-| Random Forest | Fast; uses height features well. | Fails to capture the spatial "shape" of a collapse. |
-| Clay + UNet | Captures decay textures; high recall with strong generalization. | High GPU demand; requires high-resolution imagery. |
+### 4.1 Balanced-validation performance
+
+At RandomForest's default 0.5 probability cutoff, no validation parcel crosses the Distressed threshold:
+
+![Validation Confusion Matrix at threshold 0.5](validation_confusion_matrix.png)
+
+All 2,875 Stable parcels are correctly classified, but all 1,437 Distressed parcels are predicted Stable. Distressed-class recall is 0 at the default threshold. The F1-optimal threshold on the validation set drops to ≈ 0.23, which raises recall but at the cost of flooding the positive class.
+
+### 4.2 Embedding-space geometry
+
+A t-SNE projection of the 1024-dim Clay CLS embeddings on the validation set makes the underlying issue visible:
+
+![t-SNE of Clay CLS embeddings on the validation set](projection.png)
+
+Stable (blue) and Distressed (red) points are uniformly intermixed — there is no region of embedding space where one class dominates. The classifier has nothing clean to lean on.
+
+Cosine nearest-neighbor retrieval tells the same story. Pulling the seven closest chips to a known Distressed query returns mostly Stable chips at very small cosine distances (0.04–0.05):
+
+![Nearest neighbors in Clay embedding space](nnclay.png)
+
+Clay's CLS token is clearly clustering by surface texture (roof tone, orientation, sunlight angle) rather than by the structural-failure signals we care about.
+
+### 4.3 High-confidence true positives
+
+Looking at the top-scoring correctly-flagged Distressed chips from the balanced validation set:
+
+![Highest-confidence true positives](val_outcomes.png)
+
+The highest predicted probabilities sit around p = 0.44–0.47 (not far above the 0.23 tuned threshold), and the chips themselves are a mix: some show visible roof patches or debris, but many are ordinary row house roofs whose only distinguishing feature seems to be shadow orientation. The model does not appear to have learned a specific structural-failure concept.
+
+### 4.4 Natural-distribution holdout
+
+At the F1-tuned threshold of 0.23, the classifier collapses when applied to the realistic class distribution:
+
+![Natural-distribution confusion matrix at threshold 0.23](nat_distribution_confusion_matrix.png)
+
+| Metric | Value |
+|---|---|
+| n (parcels) | 54,728 |
+| True prior (Distressed) | 1.4% (770 parcels) |
+| Predicted positive rate | 100% |
+| Recall (Distressed) | 1.00 |
+| Precision (Distressed) | 0.014 |
+
+Every parcel gets flagged. Mapping the predicted probabilities geographically explains why:
+
+![Predicted distress probability on the natural-distribution holdout](preds_naturaldistribution.png)
+
+The predicted probabilities for the entire city cluster in a narrow band of roughly 0.28–0.43. There is no clean separation — pushing the threshold up flags nobody, pushing it down flags everybody. The classifier is operating in a regime where almost all signal is noise.
+
+---
+
+## 5. Discussion
+
+The pipeline runs end to end and is reproducible, but it does not produce an operationally useful distress classifier. Three factors explain the negative result.
+
+### 5.1 Clay's global embeddings are the wrong granularity for this task
+
+The CLS token is a 1024-dim summary of the entire 40 m chip. Imminent Dangerousness, when it is visible at all from above, is usually a localized 5% of the pixels — a hole in a roof, a missing chimney, a tarp. Summarizing the whole chip averages that signal away. A segmentation or patch-level approach using Clay's intermediate patch tokens would be a better fit, but requires pixel-level labels we do not have.
+
+### 5.2 Label noise in L&I administrative classifications
+
+L&I's Imminently Dangerous and Unsafe designations are generated by inspection triggers (complaints, prior violations, permit activity), not by physical inspection of every building in the city. Many Unsafe parcels look unremarkable from above because the violation is interior, structural, or on the facade only. Conversely, visibly collapsed buildings are often absent from the Distressed set because no one has yet filed a complaint. Training a visual classifier against a label column that is only partially aligned with visual damage puts a low ceiling on achievable accuracy.
+
+### 5.3 Single timepoint, no elevation
+
+The proposal included two signals that did not make it into this iteration: year-over-year change detection between the 2024 and 2025 mosaics, and DEM- or LiDAR-derived height deltas. Both would directly target the physical failure modes (roof collapse, wall displacement) that pure single-timepoint RGB misses.
+
+---
+
+## 6. What we would try next
+
+- **Patch-token segmentation head.** Replace the CLS RandomForest with a lightweight decoder over Clay's patch tokens, supervised against synthetic pseudo-labels (dark pixels within building footprint, footprint-to-roof-area mismatch). This lets the model focus on local distress rather than global texture.
+- **DEM height deltas.** Subtract the 2024 and 2025 elevation surfaces to flag roof collapses directly. This signal is complementary to RGB and robust to shadow and roof-color confounds.
+- **Street-level pairing.** Pair each parcel with the nearest Mapillary or Google Street View image. Facade damage — the dominant mode of "Unsafe" — is almost entirely invisible from directly above.
+- **Label cleanup.** Manually re-label a stratified subset of Imminently Dangerous parcels against the aerial imagery so we can separate administrative label noise from genuine aerial-visible damage, and evaluate the model on the clean subset.
+
+---
+
+## 7. Comparison of considered approaches
+
+| Approach | Pro | Con | Status |
+|---|---|---|---|
+| NDVI baseline | Finds "green" roofs (leaks → moss) | Misses structural failures without vegetation | Not pursued |
+| Random Forest on hand-crafted features | Fast; uses height features well | Fails to capture the spatial shape of a collapse | Not pursued |
+| Clay + UNet segmentation (original plan) | Pixel-level output; captures local damage | Requires pixel-level labels we don't have | Scoped out after label audit |
+| **Clay CLS + RandomForest (implemented)** | Follows Clay's documented classification recipe; trivial to train | Global embedding averages away local damage signal; embedding space does not separate the classes | Implemented in `main_v4.py`; negative result |
+| Clay patch-token decoder + pseudo-labels | Uses Clay's spatial features; no hand-labels required | More engineering; pseudo-label quality is the bottleneck | Proposed for next iteration |
+
+---
+
+## 8. References
+
+- Schroer, K., Adhikari, B., & Moise, I. (2025, May 29). *Revolutionizing earth observation with geospatial foundation models on AWS.* AWS Machine Learning Blog.
+- Hatić, D., Polushko, V., Rauhut, M., & Hagen, H. (2025). *Post-Disaster Building Damage Assessment: Multi-Class Object Detection vs. Object Localization and Classification.* Remote Sensing, 17(24), 3957.
+- Liu, C., Ge, L., & Sepasgozar, S. M. E. (2021). *Post-Disaster Classification of Building Damage Using Transfer Learning.* 2021 IEEE International Geoscience and Remote Sensing Symposium IGARSS, Brussels, Belgium, 2194–2197.
+- Ahmadi, S. A., Mohammadzadeh, A., Yokoya, N., & Ghorbanian, A. (2024). *BD-SKUNet: Selective-Kernel UNets for Building Damage Assessment in High-Resolution Satellite Images.* Remote Sensing, 16(1), 182.
+- Clay Foundation. *Finetune on Embeddings.* https://clay-foundation.github.io/model/finetune/finetune-on-embeddings.html
